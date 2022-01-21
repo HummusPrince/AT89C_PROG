@@ -54,5 +54,5 @@ cleanall: clean
 	rm -f *.hex
 
 .PHONY: flash
-flash: ${BIN}.hex
-	${PRG} ${PRGFLAGS} $^
+flash: build clean
+	${PRG} ${PRGFLAGS} ${BIN}.hex
