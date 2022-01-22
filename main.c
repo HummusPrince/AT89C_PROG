@@ -1,5 +1,6 @@
 #include <8052.h>
 #include <stdint.h>
+#include <stdbool.h>
 
 #define F_OSC 12000000L
 #define BAUDRATE 4800
@@ -16,7 +17,8 @@ void ser_isr(void) __interrupt SI0_VECTOR {
 
 void main(){
     
-    uint8_t buf = 0;
+    __xdata uint8_t *flashaddr = 0;
+    bool flag = 0;
 
     SM1 = 1;
     PCON |= SMOD | SMOD0;
@@ -25,16 +27,24 @@ void main(){
     TR1 = 1;
     ES = 1;
     REN = 1;
+    P2_0 = 0;
 
     while(1){
         EA = 1;
         PCON |= IDL;
         if(RI){
-            SBUF++;
             RI = 0;
+            //flag = (SBUF == 'R');
+            flag = 1;
+            P2_0 = flag;
+            SBUF = ':';
         }
         else if(TI){
             TI = 0;
+            if(flag){
+                SBUF = *flashaddr++;
+                flag = (flashaddr < 0xFFFF);
+            }
         }
     }
 }

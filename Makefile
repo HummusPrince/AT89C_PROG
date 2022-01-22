@@ -9,7 +9,7 @@
 #LDFLAGS = -f
 
 CC = sdcc
-CCFLAGS = -mmcs51
+CCFLAGS = -mmcs51 --xram-movc
 
 PRG = stcgal
 PRGFLAGS = -P stc89 -b 2400
@@ -54,5 +54,5 @@ cleanall: clean
 	rm -f *.hex
 
 .PHONY: flash
-flash: build clean
+flash: all
 	${PRG} ${PRGFLAGS} ${BIN}.hex
