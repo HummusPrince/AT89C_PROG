@@ -15,8 +15,8 @@ void ser_isr(void) __interrupt SI0_VECTOR {
 }
 
 void main(){
-
-    uint8_t i = 0;
+    
+    uint8_t buf = 0;
 
     SM1 = 1;
     PCON |= SMOD | SMOD0;
@@ -24,11 +24,17 @@ void main(){
     TH1 = T1_DIV;
     TR1 = 1;
     ES = 1;
+    REN = 1;
 
     while(1){
         EA = 1;
-        SBUF = i++;
         PCON |= IDL;
-        TI = 0;
+        if(RI){
+            SBUF++;
+            RI = 0;
+        }
+        else if(TI){
+            TI = 0;
+        }
     }
 }
