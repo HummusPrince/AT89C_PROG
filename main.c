@@ -21,8 +21,8 @@ void main(){
     TR1 = 1;
 
     while(1){
-        delay(128);
-        P2_0^=1;
         SBUF = i++;
+        while(TI == 0){}
+        TI = 0;
     }
 }
