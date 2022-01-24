@@ -9,7 +9,7 @@
 #LDFLAGS = -f
 
 CC = sdcc
-CCFLAGS = -mmcs51 --xram-movc
+CCFLAGS = -mmcs51 
 
 PRG = stcgal
 PRGFLAGS = -P stc89 -b 2400
@@ -38,16 +38,7 @@ build: ${BIN}.hex
 
 .PHONY: clean
 clean:
-	rm -f *.ihx
-	rm -f *.rel
-	rm -f *.map
-	rm -f *.lst
-	rm -f *.rst
-	rm -f *.sym
-	rm -f *.hlr
-	rm -f *.lk
-	rm -f *.asm
-	rm -f *.mem
+	rm -f *.{rel,ihx,map,lst,rst,sym,hlr,lk,asm,mem}
 	
 .PHONY: cleanall
 cleanall: clean
