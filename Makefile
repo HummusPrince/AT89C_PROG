@@ -12,7 +12,7 @@ CC = sdcc
 CCFLAGS = -mmcs51 
 
 PRG = stcgal
-PRGFLAGS = -P stc89 -b 2400
+PRGFLAGS = -P stc89 -b 115200
 
 BIN = main
 

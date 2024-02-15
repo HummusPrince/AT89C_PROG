@@ -2,8 +2,8 @@
 #include <stdint.h>
 #include <stdbool.h>
 
-#define F_OSC 12000000L
-#define BAUDRATE 4800
+#define F_OSC 22118400L
+#define BAUDRATE 115200
 #define T1_DIV (uint8_t)(256-F_OSC/6/32/BAUDRATE)
 
 #define RW_BUFSIZE 0x10
