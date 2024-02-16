@@ -13,10 +13,10 @@
 #define FE SM0
 
 //Globals
-    volatile __code uint8_t *flashaddr = 0;
-    volatile __data uint8_t rx_buf[RXTX_BUFSIZE];
-    volatile __data uint8_t tx_buf[RXTX_BUFSIZE];
-    volatile __data uint8_t rw_buf[RW_BUFSIZE];
+    volatile __code uint8_t *flashaddr = 0;     //Internal CROM address
+    volatile __data uint8_t rx_buf[RXTX_BUFSIZE];   //Buffer for incoming data
+    volatile __data uint8_t tx_buf[RXTX_BUFSIZE];   //Buffer for outgoing data
+    volatile __data uint8_t rw_buf[RW_BUFSIZE];     //Buffer for DUT reads/writes
     volatile uint8_t rx_buf_cnt = 0;
     volatile uint8_t tx_buf_cnt = 0;
     volatile uint8_t rw_buf_cnt = 0;
@@ -36,7 +36,7 @@ void readbytes(__code const uint8_t *baseaddr, uint8_t numbytes, uint8_t *buffer
 }
 
 /* UART CONTROL */
-void set_uart() {   //For now it's all hard coded
+void set_uart(void) {   //For now it's all hard coded
     //Set UART mode 1
     SM1 = 1;
     SM0 = 0;
@@ -55,7 +55,7 @@ void set_uart() {   //For now it's all hard coded
 
 /* ISRs */
 
-void ser_isr(void) __interrupt SI0_VECTOR {
+void ser_isr(void) __interrupt (SI0_VECTOR) {
     EA = 0;
     if(FE){
         fe_cnt++;
@@ -74,9 +74,34 @@ void ser_isr(void) __interrupt SI0_VECTOR {
     EA = 1;
 }
 
+void rx_handler(void) {
+    if(rx_buf_cnt){
+        EA = 0;
+        uint8_t token = rx_buf[0];
+        switch (token){
+            //Ping
+            case 'P':
+                tx_buf[0] = 'P';    //Pong
+                rx_buf_cnt = 0;
+                tx_buf_cnt = 1;
+                TI = 1;
+                break;
+
+            //NACK - when command is invalid
+            default:
+                tx_buf[0] = 'N';    //NACK
+                rx_buf_cnt = 0;
+                tx_buf_cnt = 1;
+                TI = 1;
+                break;
+        }
+        EA = 1;
+    }
+}
+
     // Packet: "<'R'><ADDR_LSB><ADDR_MSB><SIZE>"
 
-void main(){
+void main(void){
     
     set_uart();
     P2_0 = 0;
@@ -84,6 +109,8 @@ void main(){
 
     while(1){
         PCON |= IDL;
+        rx_handler();
+        /*
         if(rx_buf_cnt >= 4 && tx_buf_cnt == 0){
             //while(rx_buf_cnt) tx_buf[tx_buf_cnt++] = rx_buf[rx_buf_cnt-- - 1];
             //tx_buf_cnt++;
@@ -104,6 +131,6 @@ void main(){
             }
             EA = 1;
         }
-
+    */
     }
 }
