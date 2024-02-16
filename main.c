@@ -79,7 +79,10 @@ void rx_handler(void) {
         EA = 0;
         uint8_t token = rx_buf[0];
         switch (token){
+            
             //Ping
+            //Send: 'P'
+            //Receive: 'P'
             case 'P':
                 tx_buf[0] = 'P';    //Pong
                 rx_buf_cnt = 0;
@@ -87,7 +90,42 @@ void rx_handler(void) {
                 TI = 1;
                 break;
 
+            //Get frame error count
+            //Send: 'F'
+            //Receive: 'F' + unsigned byte of error count
+            case 'F':
+                tx_buf[1] = 'F';    //Frame Error reply
+                tx_buf[0] = fe_cnt; //The count itself
+                rx_buf_cnt = 0;
+                tx_buf_cnt = 2;
+                TI = 1;
+                break;
+
+            //Read internal flash of programmer flash
+            //Send: "<'R'><ADDR_LSB><ADDR_MSB><SIZE>"
+            //Receive: SIZE bytes of raw data, single byte 'E' if SIZE>RW_BUFSIZE
+            case 'R':
+                if(rx_buf_cnt >= 4) {
+                    if(rx_buf[3] > RW_BUFSIZE){
+                        tx_buf[0] = 'E';    //Error!
+                        rx_buf_cnt = 0;
+                        tx_buf_cnt = 1;
+                        TI = 1;
+                    }
+                    else {
+                        rx_buf_cnt = 0;
+                        tx_buf_cnt = rx_buf[3];
+                        flashaddr = (__code uint8_t*)(((uint16_t)rx_buf[2] << 8)|(rx_buf[1]));
+                        //flashaddr = *(rx_buf + 1);
+                        readbytes(flashaddr, tx_buf_cnt, tx_buf);
+                        TI = 1;
+                    }
+                }
+                break;
+
             //NACK - when command is invalid
+            //Send: Anything else
+            //Receive: 'N'
             default:
                 tx_buf[0] = 'N';    //NACK
                 rx_buf_cnt = 0;
@@ -99,7 +137,6 @@ void rx_handler(void) {
     }
 }
 
-    // Packet: "<'R'><ADDR_LSB><ADDR_MSB><SIZE>"
 
 void main(void){
     
@@ -110,27 +147,5 @@ void main(void){
     while(1){
         PCON |= IDL;
         rx_handler();
-        /*
-        if(rx_buf_cnt >= 4 && tx_buf_cnt == 0){
-            //while(rx_buf_cnt) tx_buf[tx_buf_cnt++] = rx_buf[rx_buf_cnt-- - 1];
-            //tx_buf_cnt++;
-            //SBUF = ':';
-            EA = 0;
-            rx_buf_cnt = 0;
-            if(rx_buf[0] == 'R'){
-                if(rx_buf[3] > RW_BUFSIZE){
-                }
-                else {
-                    //P2_0 ^= 1;
-                    tx_buf_cnt = rx_buf[3];
-                    flashaddr = (__code uint8_t*)(((uint16_t)rx_buf[2] << 8)|(rx_buf[1]));
-                    //flashaddr = *(rx_buf + 1);
-                    readbytes(flashaddr, tx_buf_cnt, tx_buf);
-                    TI = 1;
-                }
-            }
-            EA = 1;
-        }
-    */
     }
 }
