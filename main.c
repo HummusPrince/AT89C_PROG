@@ -1,6 +1,7 @@
 #include <8052.h>
 #include <stdint.h>
 #include <stdbool.h>
+#include "pinout.h"
 
 #define F_OSC 22118400L
 #define BAUDRATE 115200
@@ -12,6 +13,7 @@
 #define SMOD0 0x40
 #define FE SM0
 
+
 //Globals
     volatile __code uint8_t *flashaddr = 0;     //Internal CROM address
     volatile __data uint8_t rx_buf[RXTX_BUFSIZE];   //Buffer for incoming data
@@ -21,10 +23,35 @@
     volatile uint8_t tx_buf_cnt = 0;
     volatile uint8_t rw_buf_cnt = 0;
     volatile uint8_t fe_cnt = 0;
-    
+
 void delay(uint16_t count){
     for(volatile uint16_t i  = 0; i < count; i++){}
 }
+
+void set_addr(uint16_t addr){
+    A_L = (uint8_t)(addr & 0xff);
+    A8 = (addr & 0x0800) > 0;
+    A9 = (addr & 0x0400) > 0;
+    A10 = (addr & 0x0200) > 0;
+    A11 = (addr & 0x0100) > 0;
+}
+
+void set_opts(uint8_t opts){
+    OPT_BITS = ((OPT_BITS & ~OPT_MASK) | (opts & OPT_MASK));
+}
+    
+void read_signature(uint8_t *buffer){
+    RST = 1;
+    VPP = 1;
+    set_opts(OPT_READ_SIGNATURE);
+    for(uint16_t i = 0x30; i < 0x33; i++){
+        set_addr(i);
+        delay(200);
+        *buffer++ = D;
+        //*buffer++ = A_L;
+    }
+}
+        
 
 /* R/W FUNCTIONALITY */
 
@@ -74,6 +101,7 @@ void ser_isr(void) __interrupt (SI0_VECTOR) {
     EA = 1;
 }
 
+//Handle all UART commands
 void rx_handler(void) {
     if(rx_buf_cnt){
         EA = 0;
@@ -101,7 +129,7 @@ void rx_handler(void) {
                 TI = 1;
                 break;
 
-            //Read internal flash of programmer flash
+            //Read internal flash of programmer chip flash
             //Send: "<'R'><ADDR_LSB><ADDR_MSB><SIZE>"
             //Receive: SIZE bytes of raw data, single byte 'E' if SIZE>RW_BUFSIZE
             case 'R':
@@ -121,6 +149,17 @@ void rx_handler(void) {
                         TI = 1;
                     }
                 }
+                break;
+
+            //Read signature bytes of DUT chip
+            //Send: "<'S'>"
+            //Receive: 'S' + 3 signature bytes
+            case 'S':
+                rx_buf_cnt = 0;
+                tx_buf_cnt = 4;
+                *tx_buf = 'S';
+                read_signature(tx_buf + 1);
+                TI = 1;
                 break;
 
             //NACK - when command is invalid
