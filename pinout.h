@@ -9,8 +9,9 @@
 #define D P1
 
 #define OPT_BITS P2
-#define OPT_MASK 0xd8
+#define OPT_MASK 0x58
 
+#define nENA P2_7
 #define RDY P2_5
 
 #define VPP P2_2

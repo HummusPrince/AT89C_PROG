@@ -43,16 +43,21 @@ void set_opts(uint8_t opts){
 void read_signature(uint8_t *buffer){
     RST = 1;
     VPP = 1;
+    nENA = 1;
+    D = 0xff;
+
     set_opts(OPT_READ_SIGNATURE);
-    for(uint16_t i = 0x30; i < 0x33; i++){
+    
+    for(uint16_t i = 0x30; i < 0x40; i++){
         set_addr(i);
         delay(200);
+        nENA = 0;
+        delay(200);
         *buffer++ = D;
-        //*buffer++ = A_L;
+        nENA = 1;
     }
 }
         
-
 /* R/W FUNCTIONALITY */
 
 //Read <numbytes> bytes of CROM from <*baseaddr> up to <*baseaddr + numbytes - 1>
@@ -156,7 +161,7 @@ void rx_handler(void) {
             //Receive: 'S' + 3 signature bytes
             case 'S':
                 rx_buf_cnt = 0;
-                tx_buf_cnt = 4;
+                tx_buf_cnt = 17;
                 *tx_buf = 'S';
                 read_signature(tx_buf + 1);
                 TI = 1;
@@ -178,13 +183,24 @@ void rx_handler(void) {
 
 
 void main(void){
-    
+    //*
     set_uart();
-    P2_0 = 0;
+    RST = 1;
+    ALE = 1;
+    VPP = 1;
+    D = 0xff;
     EA = 1;
 
     while(1){
         PCON |= IDL;
         rx_handler();
     }
+    /*
+    while(1){
+        P0 ^= 0xFF;
+        P1 ^= 0xFF;
+        P2 ^= 0xFF;
+        P3 ^= 0xF0;
+        delay(0xffff);
+    } */
 }
