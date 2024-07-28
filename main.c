@@ -40,20 +40,41 @@ void set_opts(uint8_t opts){
     OPT_BITS = ((OPT_BITS & ~OPT_MASK) | (opts & OPT_MASK));
 }
     
-void read_signature(uint8_t *buffer){
+
+void read_code(uint8_t *buffer, uint8_t numbytes, uint16_t baseaddr){
     RST = 1;
     VPP = 1;
     nENA = 1;
     D = 0xff;
 
+    set_opts(OPT_READ_CODE);
+    
+    for(uint16_t i = baseaddr; i < baseaddr + numbytes; i++){
+        set_addr(i);
+        nENA = 1;
+        delay(20);
+        nENA = 0;
+        delay(20);
+        *(buffer++) = D;
+    }
+    
+}
+
+void read_signature(uint8_t *buffer){
+    RST = 1;
+    VPP = 1;
+    ALE = 1;
+    nENA = 1;
+    D = 0xff;
+
     set_opts(OPT_READ_SIGNATURE);
     
-    for(uint16_t i = 0x30; i < 0x40; i++){
+    for(uint16_t i = 0x30; i < 0x33; i++){
         set_addr(i);
-        delay(200);
+        delay(20);
         nENA = 0;
-        delay(200);
-        *buffer++ = D;
+        delay(20);
+        *(buffer++) = D;
         nENA = 1;
     }
 }
@@ -161,10 +182,31 @@ void rx_handler(void) {
             //Receive: 'S' + 3 signature bytes
             case 'S':
                 rx_buf_cnt = 0;
-                tx_buf_cnt = 17;
+                tx_buf_cnt = 4;
                 *tx_buf = 'S';
                 read_signature(tx_buf + 1);
                 TI = 1;
+                break;
+
+            //Read code of DUT chip
+            //Send: "<'C'><ADDR_LSB><ADDR_MSB><SIZE>"
+            //Receive: 'C' + SIZE bytes of raw data, single byte 'E' if SIZE>RW_BUFSIZE
+            case 'C':
+                if(rx_buf_cnt >= 4) {
+                    if(rx_buf[3] > RW_BUFSIZE){
+                        tx_buf[0] = 'E';    //Error!
+                        rx_buf_cnt = 0;
+                        tx_buf_cnt = 1;
+                    }
+                    else {
+                        rx_buf_cnt = 0;
+                        tx_buf[0] = 'C';    //Error!
+                        tx_buf_cnt = rx_buf[3] + 1;
+                        uint16_t baseaddr = (((uint16_t)rx_buf[2] << 8)|(rx_buf[1]));
+                        read_code(tx_buf + 1, tx_buf_cnt, baseaddr);
+                    }
+                    TI = 1;
+                }
                 break;
 
             //NACK - when command is invalid
@@ -195,12 +237,4 @@ void main(void){
         PCON |= IDL;
         rx_handler();
     }
-    /*
-    while(1){
-        P0 ^= 0xFF;
-        P1 ^= 0xFF;
-        P2 ^= 0xFF;
-        P3 ^= 0xF0;
-        delay(0xffff);
-    } */
 }

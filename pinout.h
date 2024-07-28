@@ -19,4 +19,4 @@
 #define RST P2_0
 
 #define OPT_READ_SIGNATURE 0x00
-#define OPT_READ_CODE 0x40
+#define OPT_READ_CODE 0x18
