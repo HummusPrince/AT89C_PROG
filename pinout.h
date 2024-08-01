@@ -16,7 +16,6 @@
 
 #define VPP P2_2
 #define ALE P2_1
-#define RST P2_0
 
 #define OPT_READ_SIGNATURE 0x00
 #define OPT_READ_CODE 0x18

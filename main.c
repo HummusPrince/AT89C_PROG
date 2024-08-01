@@ -42,12 +42,10 @@ void set_opts(uint8_t opts){
     
 
 void read_code(uint8_t *buffer, uint8_t numbytes, uint16_t baseaddr){
-    RST = 1;
     VPP = 1;
+    ALE = 1;
     nENA = 1;
     D = 0xff;
-
-    set_opts(OPT_READ_CODE);
     
     for(uint16_t i = baseaddr; i < baseaddr + numbytes; i++){
         set_addr(i);
@@ -60,24 +58,6 @@ void read_code(uint8_t *buffer, uint8_t numbytes, uint16_t baseaddr){
     
 }
 
-void read_signature(uint8_t *buffer){
-    RST = 1;
-    VPP = 1;
-    ALE = 1;
-    nENA = 1;
-    D = 0xff;
-
-    set_opts(OPT_READ_SIGNATURE);
-    
-    for(uint16_t i = 0x30; i < 0x33; i++){
-        set_addr(i);
-        delay(20);
-        nENA = 0;
-        delay(20);
-        *(buffer++) = D;
-        nENA = 1;
-    }
-}
         
 /* R/W FUNCTIONALITY */
 
@@ -113,7 +93,6 @@ void ser_isr(void) __interrupt (SI0_VECTOR) {
     if(FE){
         fe_cnt++;
         FE = 0;
-        //P2_0 = 1;
         return;
     }
     if(RI){
@@ -177,15 +156,18 @@ void rx_handler(void) {
                 }
                 break;
 
-            //Read signature bytes of DUT chip
-            //Send: "<'S'>"
-            //Receive: 'S' + 3 signature bytes
-            case 'S':
-                rx_buf_cnt = 0;
-                tx_buf_cnt = 4;
-                *tx_buf = 'S';
-                read_signature(tx_buf + 1);
-                TI = 1;
+            //Set option bits
+            //Send: "<'O'>"
+            //Receive: 'O' + 1 option byte (only right nibble)
+            case 'O':
+                if(rx_buf_cnt >= 2){
+                    set_opts(rx_buf[1]);
+                    tx_buf_cnt = 2;
+                    *tx_buf = 'O';
+                    tx_buf[1] = OPT_BITS & OPT_MASK;
+                    rx_buf_cnt = 0;
+                    TI = 1;
+                }
                 break;
 
             //Read code of DUT chip
@@ -227,7 +209,6 @@ void rx_handler(void) {
 void main(void){
     //*
     set_uart();
-    RST = 1;
     ALE = 1;
     VPP = 1;
     D = 0xff;
