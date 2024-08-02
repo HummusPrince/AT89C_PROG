@@ -91,9 +91,10 @@ void set_uart(void) {   //For now it's all hard coded
 void ser_isr(void) __interrupt (SI0_VECTOR) {
     EA = 0;
     if(FE){
-        fe_cnt++;
+        if(fe_cnt < 0xff) fe_cnt++;
         FE = 0;
-        return;
+        RI = 0;
+        rx_buf_cnt = 0;
     }
     if(RI){
         RI = 0;
